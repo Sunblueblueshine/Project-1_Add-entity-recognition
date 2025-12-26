@@ -40,6 +40,26 @@
     <div class="d-flex justify-content-end gap-2 mt-3">
         <button id="export-btn" class="btn btn-outline-secondary" style="display:none;">导出结果(JSON)</button>
         <button id="export-excel-btn" class="btn btn-outline-success" style="display:none;">导出结果(Excel)</button>
+        <button id="view-entities-btn" class="btn btn-outline-info" style="display:none;">查看实体识别结果</button>
+    </div>
+
+    <!-- JY: 实体识别结果查看模态框 -->
+    <div class="modal fade" id="entitiesModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered" style="max-width: 900px;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">实体识别结果</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" style="max-height: 600px; overflow-y: auto;">
+                    <div id="entities-content"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                    <button id="download-entities-btn" type="button" class="btn btn-primary">下载JSON</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <hr class="my-4">
@@ -242,6 +262,8 @@ document.getElementById('upload-form').onsubmit = async function(e) {
             lastTaskId = taskId;
             document.getElementById('export-btn').style.display = '';
             document.getElementById('export-excel-btn').style.display = '';
+            // JY: 显示实体识别结果查看按钮
+            document.getElementById('view-entities-btn').style.display = '';
         } else if (resultData.result && resultData.result.status === 'error') {
             finished = true;
             progressBar.style.width = '100%';
@@ -320,6 +342,143 @@ document.getElementById('export-btn').onclick = function() {
 document.getElementById('export-excel-btn').onclick = function() {
     if (!lastTaskId) return;
     window.open(`/api/similarity/export_excel?task_id=${lastTaskId}`);
+};
+
+// JY: 新增实体识别结果查看功能
+let currentEntitiesData = null;  // 存储当前的实体识别数据
+
+document.getElementById('view-entities-btn').onclick = async function() {
+    if (!lastTaskId) return;
+    
+    try {
+        // 获取提取文本列表
+        const listResp = await fetch('/api/similarity/extracted_texts');
+        const listData = await listResp.json();
+        
+        if (!listData.files || listData.files.length === 0) {
+            alert('暂无提取文本数据');
+            return;
+        }
+        
+        // 查找对应任务的文件
+        const taskFile = listData.files.find(f => f.task_id === lastTaskId);
+        if (!taskFile) {
+            alert('未找到对应的提取文本');
+            return;
+        }
+        
+        // 获取详细数据
+        const detailResp = await fetch(`/api/similarity/extracted_texts/${taskFile.filename}`);
+        const detailData = await detailResp.json();
+        
+        if (!detailData.data) {
+            alert('获取数据失败');
+            return;
+        }
+        
+        currentEntitiesData = detailData.data;
+        displayEntitiesModal(currentEntitiesData);
+        
+    } catch (e) {
+        alert('获取实体识别结果失败: ' + e.message);
+    }
+};
+
+// JY: 显示实体识别结果的模态框
+function displayEntitiesModal(data) {
+    const content = document.getElementById('entities-content');
+    let html = '';
+    
+    // 显示基本信息
+    html += `<div class="alert alert-info">
+        <strong>任务ID:</strong> ${data.task_id}<br>
+        <strong>时间戳:</strong> ${data.timestamp}<br>
+        <strong>招标文件:</strong> ${data.tender_file}<br>
+        <strong>投标文件数:</strong> ${data.bid_files ? data.bid_files.length : 0}
+    </div>`;
+    
+    // 招标文件的实体识别
+    if (data.tender_texts && data.tender_texts.length > 0) {
+        html += '<h6 class="mt-4">招标文件</h6>';
+        for (const textItem of data.tender_texts) {
+            html += `<div class="card mb-2">
+                <div class="card-header">
+                    <strong>第 ${textItem.page} 页</strong>
+                    ${textItem.is_table_cell ? '<span class="badge bg-warning">表格单元格</span>' : ''}
+                </div>
+                <div class="card-body" style="max-height: 150px; overflow-y: auto;">`;
+            
+            // 显示文本
+            html += `<p class="text-muted" style="font-size: 0.85rem; max-height: 40px; overflow: hidden;">
+                ${textItem.text.substring(0, 100)}...
+            </p>`;
+            
+            // 显示识别的实体
+            if (textItem.entities && textItem.entities.length > 0) {
+                html += '<div><strong>识别实体:</strong></div><ul class="mb-0" style="font-size: 0.9rem;">';
+                for (const entity of textItem.entities) {
+                    html += `<li><span class="badge bg-primary">${entity.entity}</span> ${entity.text_content}</li>`;
+                }
+                html += '</ul>';
+            } else {
+                html += '<p class="text-muted" style="font-size: 0.9rem;">无识别实体</p>';
+            }
+            
+            html += '</div></div>';
+        }
+    }
+    
+    // 投标文件的实体识别
+    if (data.bid_files && data.bid_files.length > 0) {
+        html += '<h6 class="mt-4">投标文件</h6>';
+        for (const bidFile of data.bid_files) {
+            html += `<div class="card mb-3">
+                <div class="card-header">
+                    <strong>${bidFile.file_name}</strong>
+                </div>
+                <div class="card-body">`;
+            
+            if (bidFile.texts && bidFile.texts.length > 0) {
+                for (const textItem of bidFile.texts) {
+                    html += `<div class="border-bottom pb-2 mb-2">
+                        <div><strong>第 ${textItem.page} 页</strong></div>
+                        <p class="text-muted" style="font-size: 0.85rem; max-height: 30px; overflow: hidden;">
+                            ${textItem.text.substring(0, 80)}...
+                        </p>`;
+                    
+                    if (textItem.entities && textItem.entities.length > 0) {
+                        html += '<div style="font-size: 0.9rem;">';
+                        for (const entity of textItem.entities) {
+                            html += `<span class="badge bg-success me-1">${entity.entity}: ${entity.text_content}</span>`;
+                        }
+                        html += '</div>';
+                    } else {
+                        html += '<p class="text-muted" style="font-size: 0.9rem;">无识别实体</p>';
+                    }
+                    
+                    html += '</div>';
+                }
+            }
+            
+            html += '</div></div>';
+        }
+    }
+    
+    content.innerHTML = html;
+    const modal = new bootstrap.Modal(document.getElementById('entitiesModal'));
+    modal.show();
+}
+
+// JY: 下载实体识别结果的JSON
+document.getElementById('download-entities-btn').onclick = function() {
+    if (!currentEntitiesData) return;
+    const blob = new Blob([JSON.stringify(currentEntitiesData, null, 2)], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `entities_result_${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
 };
 
 // ========== 筛选结果：前端上传JSON并调用过滤API ==========

@@ -155,6 +155,7 @@ class PaddleOCRService:
                             
                             for i in range(min_length):
                                 text_content = rec_texts[i] if i < len(rec_texts) else ""
+                                entities = default_entity_rec_service.recognize(text_content)
                                 confidence = rec_scores[i] if i < len(rec_scores) else 1.0
                                 
                                 logger.debug(f"识别文本: '{text_content}', 置信度: {confidence:.3f}")

@@ -1,0 +1,9 @@
+README.md
+pyproject.toml
+app/main.py
+app/test_entity.py
+bidding_docs_similarity.egg-info/PKG-INFO
+bidding_docs_similarity.egg-info/SOURCES.txt
+bidding_docs_similarity.egg-info/dependency_links.txt
+bidding_docs_similarity.egg-info/requires.txt
+bidding_docs_similarity.egg-info/top_level.txt

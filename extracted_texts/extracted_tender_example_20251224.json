@@ -1,0 +1,217 @@
+{
+  "task_id": "task_example_20251224",
+  "timestamp": "2025-12-24 10:30:00",
+  "tender_file": "招标文件示例.pdf",
+  "bid_files": [
+    {
+      "filename": "投标文件1.pdf",
+      "texts": [
+        {
+          "page": 1,
+          "text": "北京科技有限公司投标文件。项目编号：BJSK2024-001。联系电话：010-12345678。法定代表人：张三（身份证号：110101199003071234）。公司地址：北京市朝阳区。",
+          "is_table_cell": false,
+          "entities": [
+            {
+              "entity": "公司",
+              "text_content": "北京科技有限公司",
+              "start": 0,
+              "end": 8
+            },
+            {
+              "entity": "项目编号",
+              "text_content": "BJSK2024-001",
+              "start": 19,
+              "end": 31
+            },
+            {
+              "entity": "联系电话",
+              "text_content": "010-12345678",
+              "start": 37,
+              "end": 49
+            },
+            {
+              "entity": "人名",
+              "text_content": "张三",
+              "start": 60,
+              "end": 62
+            },
+            {
+              "entity": "身份证",
+              "text_content": "110101199003071234",
+              "start": 66,
+              "end": 84
+            }
+          ]
+        },
+        {
+          "page": 2,
+          "text": "第二章 技术方案。上海建筑工程有限责任公司提供的设计方案。项目负责人：李四。电话：13800138000。身份证：110101199003071235。",
+          "is_table_cell": false,
+          "entities": [
+            {
+              "entity": "公司",
+              "text_content": "上海建筑工程有限责任公司",
+              "start": 13,
+              "end": 23
+            },
+            {
+              "entity": "人名",
+              "text_content": "李四",
+              "start": 40,
+              "end": 42
+            },
+            {
+              "entity": "联系电话",
+              "text_content": "13800138000",
+              "start": 50,
+              "end": 61
+            },
+            {
+              "entity": "身份证",
+              "text_content": "110101199003071235",
+              "start": 68,
+              "end": 86
+            }
+          ]
+        },
+        {
+          "page": 3,
+          "text": "第三章 财务方案。投标金额：￥500,000元。项目编号为HBSK2024-069。广州市房地产开发有限公司承担。联系：0311-2053332。",
+          "is_table_cell": false,
+          "entities": [
+            {
+              "entity": "项目编号",
+              "text_content": "HBSK2024-069",
+              "start": 32,
+              "end": 44
+            },
+            {
+              "entity": "公司",
+              "text_content": "广州市房地产开发有限公司",
+              "start": 47,
+              "end": 57
+            },
+            {
+              "entity": "联系电话",
+              "text_content": "0311-2053332",
+              "start": 68,
+              "end": 80
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "filename": "投标文件2.pdf",
+      "texts": [
+        {
+          "page": 1,
+          "text": "深圳市南山区软件有限公司投标。项目编号：SZSK2024-002。项目经理：王五。身份证：110101199003071236。公司电话：0755-88888888。",
+          "is_table_cell": false,
+          "entities": [
+            {
+              "entity": "公司",
+              "text_content": "深圳市南山区软件有限公司",
+              "start": 0,
+              "end": 12
+            },
+            {
+              "entity": "项目编号",
+              "text_content": "SZSK2024-002",
+              "start": 20,
+              "end": 32
+            },
+            {
+              "entity": "人名",
+              "text_content": "王五",
+              "start": 38,
+              "end": 40
+            },
+            {
+              "entity": "身份证",
+              "text_content": "110101199003071236",
+              "start": 44,
+              "end": 62
+            },
+            {
+              "entity": "联系电话",
+              "text_content": "0755-88888888",
+              "start": 70,
+              "end": 83
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "tender_texts": [
+    {
+      "page": 1,
+      "text": "邺台市襄区应急救援能力提升项目招标文件。项目编号：HBSK2024-069。采购单位：河北槟榕工程公司。招标负责人：赵六。身份证：110101199003071237。联系电话：0311-8888888。",
+      "is_table_cell": false,
+      "entities": [
+        {
+          "entity": "项目编号",
+          "text_content": "HBSK2024-069",
+          "start": 24,
+          "end": 36
+        },
+        {
+          "entity": "公司",
+          "text_content": "河北槟榕工程公司",
+          "start": 48,
+          "end": 56
+        },
+        {
+          "entity": "人名",
+          "text_content": "赵六",
+          "start": 62,
+          "end": 64
+        },
+        {
+          "entity": "身份证",
+          "text_content": "110101199003071237",
+          "start": 68,
+          "end": 86
+        },
+        {
+          "entity": "联系电话",
+          "text_content": "0311-8888888",
+          "start": 91,
+          "end": 103
+        }
+      ]
+    },
+    {
+      "page": 2,
+      "text": "第二章 投标人资格要求。投标单位名称：北京市朝阳区建筑设计有限公司。项目号：BJSK2024-001。投标人代表：孙七。电话：13900000000。",
+      "is_table_cell": false,
+      "entities": [
+        {
+          "entity": "公司",
+          "text_content": "北京市朝阳区建筑设计有限公司",
+          "start": 20,
+          "end": 33
+        },
+        {
+          "entity": "项目编号",
+          "text_content": "BJSK2024-001",
+          "start": 38,
+          "end": 50
+        },
+        {
+          "entity": "人名",
+          "text_content": "孙七",
+          "start": 57,
+          "end": 59
+        },
+        {
+          "entity": "联系电话",
+          "text_content": "13900000000",
+          "start": 67,
+          "end": 78
+        }
+      ]
+    }
+  ]
+}

@@ -25,6 +25,7 @@ from app.service.text_utils import (
 )
 from app.config.similarity_config import default_config
 from app.config.terms_config import COMMON_TERMS
+from app.service.entity_rec_service import default_entity_rec_service
 
 # 初始化提取文本保存目录
 EXTRACTED_TEXTS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../extracted_texts'))
@@ -204,12 +205,32 @@ class SimilarityService:
                     clean_text = remove_stopwords(page_text, list(self.stopwords))
                     if clean_text:
                         grammar_errors = detect_grammar_errors(clean_text)
+                        
+                        #新增，实体识别
+                        entities = []
+                        if hasattr(self,'entity_service'):
+                            entities = self.entity_service.extract_entities(page_text)
+                        else:
+                            #如果没有实体服务，则调用默认服务
+                            entities = default_entity_rec_service.extract_entities(page_text)
+                            """try:
+                                entities = default_entity_rec_service.recognize(clean_text)
+                            except Exception as e:
+                                logger.warning(f"实体识别失败（招标页 {text_data.get('page', 1)}）: {e}")
+                            """
+                        
                         tender_segments.append({
                             'page': text_data.get('page', 1),
                             'text': clean_text,
                             'grammar_errors': grammar_errors,
-                            'is_table_cell': False
+                            'is_table_cell': False,
+                            'entities': entities,#新增，实体识别结果
+                            'original_text': page_text #新增，保存原始文本
                         })
+
+                        #新增：将实体识别结果也保存回原始数据，用于最终输出
+                        if 'entities' not in text_data:
+                            text_data['entities'] = entities
             
             # 处理投标文件文本
             bid_files_data = extracted_data['bid_files']
@@ -226,13 +247,24 @@ class SimilarityService:
                         clean_text = remove_stopwords(page_text, list(self.stopwords))
                         if clean_text:
                             grammar_errors = detect_grammar_errors(clean_text)
+                            
+                            #新增：实体识别
+                            entities = []
+                            if hasattr(self,'entity_service'):
+                                entities = self.entity_service.extract_entities(page_text)
+                            else:
+                                entities = default_entity_rec_service.extract_entities(page_text)
                             file_segments.append({
                                 'page': text_data.get('page', 1),
                                 'text': clean_text,
                                 'grammar_errors': grammar_errors,
-                                'is_table_cell': False
+                                'is_table_cell': False,
+                                'entities': entities,#新增，实体识别结果
+                                'original_text': page_text #新增，保存原始文本
                             })
-                
+                            #新增：将实体识别结果也保存回原始数据，用于最终输出
+                            if 'entities' not in text_data:
+                                text_data['entities'] = entities
                 if file_segments:
                     # 向量化
                     texts = [seg['text'] for seg in file_segments]
@@ -251,9 +283,10 @@ class SimilarityService:
             )
             
             # 生成结果
+            # 修改，在生成结果时包含实体识别
             self._generate_result(
                 task_id, details, common_grammar_errors, filtered_bid_segments,
-                bid_file_paths, start_time
+                bid_file_paths, start_time #extracted_data #传入提取数据
             )
             
         except Exception as e:
@@ -444,14 +477,19 @@ class SimilarityService:
                 "tender_texts": [],
                 "bid_files": []
             }
-            
-            # 添加招标文件提取的文本
+            # 添加招标文件提取的文本（含实体识别）
             for seg in tender_segments:
-                extracted_data["tender_texts"].append({
-                    "page": seg["page"],
+                page_obj = {
+                     "page": seg["page"],
                     "text": seg["text"],
                     "is_table_cell": seg["is_table_cell"]
-                })
+                }
+                try:
+                    page_obj["entities"] = default_entity_rec_service.recognize(seg["text"])
+                except Exception as e:
+                    logger.warning(f"实体识别失败（招标页 {seg.get('page')}）: {e}")
+                    page_obj["entities"] = []
+                extracted_data["tender_texts"].append(page_obj)
             
             # 添加每个投标文件提取的文本
             for i, bid_path in enumerate(bid_file_paths):
@@ -462,11 +500,17 @@ class SimilarityService:
                 
                 if i < len(bid_segments_list):
                     for seg in bid_segments_list[i]:
-                        bid_data["texts"].append({
+                        page_obj = {
                             "page": seg["page"],
                             "text": seg["text"],
                             "is_table_cell": seg["is_table_cell"]
-                        })
+                        }
+                        try:
+                            page_obj["entities"] = default_entity_rec_service.recognize(seg["text"])
+                        except Exception as e:
+                            logger.warning(f"实体识别失败（投标文件 {bid_data['file_name']} 页 {seg.get('page')}）: {e}")
+                            page_obj["entities"] = []
+                        bid_data["texts"].append(page_obj)
                 
                 extracted_data["bid_files"].append(bid_data)
             
@@ -1019,7 +1063,7 @@ class SimilarityService:
         ]
         
         return common_grammar_errors
-        
+
     def _generate_result(self, task_id: str, details: List[Dict[str, Any]],
                        common_grammar_errors: List[Dict[str, Any]],
                        filtered_bid_segments: List[List[Dict[str, Any]]],
@@ -1038,18 +1082,87 @@ class SimilarityService:
         avg_similarity_score = float(f'{np.mean([d["similarity"] for d in details]):.4f}') if details else 0.0
         max_similarity_score = float(f'{max([d["similarity"] for d in details]):.4f}') if details else 0.0
         
+
+        #修改，获取实体统计信息
+        entity_statistics = {}
+        try:
+            #从任务中获取提取数据
+            extracted_data = self.tasks.get(task_id, {}).get('extracted_data', {})
+            if extracted_data:
+                entity_statistics = self._collect_entity_statistics(extracted_data)
+                #将实体统计添加到summary中
+                total_entities = entity_statistics.get('total_entities', 0)
+                if total_entities > 0:
+                    entity_types = entity_statistics.get('entity_types', {})
+                    entity_type_str = "、".join(entity_types[:3])#只显示前3中，这里有保留，是否全显示
+                    if len(entity_types) > 3:
+                        entity_type_str += f"等{len(entity_types)}种"
+                    summary += f' 共识别出{total_entities}个实体，主要包括{entity_type_str}。'
+        except Exception as e:
+            logger.error(f"生成实体统计信息失败: {str(e)}")
+        #修改，结束
+
         self.tasks[task_id]["status"] = "done"
-        self.tasks[task_id]["result"] = {
-            "summary": summary, 
-            "details": details, 
+        #self.tasks[task_id]["result"] = 
+        result_data = {
+            "summary": summary,
+            "details": details,
             "grammar_errors": common_grammar_errors,
             "total_similarity_count": total_similarity_count,
             "total_bid_files": total_bid_files,
             "total_segments_processed": total_segments_processed,
             "avg_similarity_score": avg_similarity_score,
             "max_similarity_score": max_similarity_score,
-            "timestamp": time.strftime('%Y-%m-%d %H:%M:%S')
+            "timestamp": time.strftime('%Y-%m-%d %H:%M:%S'),  
+            "processing_time": time.time() - start_time,      
+            "task_id": task_id
         }
+        
+
+        #修改:添加实体相关信息
+        if entity_statistics:
+            result_data["entity_statistics"] = entity_statistics
+        
+        # 修改:，如果存在提取数据，将其包含在结果中（包含实体识别结果）
+        extracted_data = self.tasks[task_id].get("extracted_data")
+        if extracted_data:
+            # 创建一个简化版的提取数据，只包含必要信息
+            simplified_extracted_data = {
+                "tender_texts": [],
+                "bid_files": []
+            }
+        
+            # 处理招标文件文本（包含实体）
+            tender_texts = extracted_data.get("tender_texts", [])
+            for text_item in tender_texts:
+                simplified_item = {
+                    "page": text_item.get("page", 1),
+                    "text": text_item.get("text", ""),
+                    "is_table_cell": text_item.get("is_table_cell", False),
+                    "entities": text_item.get("entities", [])  # ✅ 包含实体识别结果
+                }
+                simplified_extracted_data["tender_texts"].append(simplified_item)
+        
+            # 处理投标文件文本（包含实体）
+            bid_files = extracted_data.get("bid_files", [])
+            for bid_file in bid_files:
+                simplified_bid_file = {
+                    "file_name": bid_file.get("file_name", ""),
+                    "texts": []
+                }
+            
+                texts = bid_file.get("texts", [])
+                for text_item in texts:
+                    simplified_text_item = {
+                        "page": text_item.get("page", 1),
+                        "text": text_item.get("text", ""),
+                        "is_table_cell": text_item.get("is_table_cell", False),
+                        "entities": text_item.get("entities", [])  # ✅ 包含实体识别结果
+                    }
+                    simplified_bid_file["texts"].append(simplified_text_item)
+                simplified_extracted_data["bid_files"].append(simplified_bid_file)
+            result_data["extracted_texts_with_entities"] = simplified_extracted_data
+        self.tasks[task_id]["result"] = result_data
         
         elapsed = time.time() - start_time
         self._log_resource('TASK_DONE', {'task_id': task_id, 'elapsed': f'{elapsed:.1f}s'})
@@ -1063,10 +1176,35 @@ class SimilarityService:
             tender_file = self.tasks.get(task_id, {}).get('file_info', {}).get('tender_file', 'result')
             tender_filename = os.path.splitext(os.path.basename(tender_file))[0]
             safe_filename = tender_filename.replace('..', '_').replace('/', '_').replace('\\', '_')
+            
+            #修改，在文件名中标识是否包含实体
+            extracted_data = self.tasks.get(task_id).get("extracted_data")
+            has_entities =False
+            if extracted_data:
+                #检查是否有实体数据
+                for text_item in extracted_data.get("tender_texts", []):
+                    if text_item.get("entities"):
+                        has_entities = True
+                        break       
+                if not has_entities:
+                    for bid_file in extracted_data.get("bid_files", []):
+                        for text_item in bid_file.get("texts", []):
+                            if text_item.get("entities"):
+                                has_entities = True
+                                break
+                        if has_entities:
+                            break
+            
             timestamp = time.strftime('%Y%m%d_%H%M%S')
-            filename = f"{safe_filename}_{task_id}_{timestamp}.json"
+
+            #修改，根据是否包含实体调整文件名
+            if has_entities:
+                filename = f"{safe_filename}_with_entities_{task_id}_{timestamp}.json"
+            else:
+                filename = f"{safe_filename}_{task_id}_{timestamp}.json"
             out_path = os.path.join(results_dir, filename)
 
+            
             with open(out_path, 'w', encoding='utf-8') as f:
                 json.dump(self.tasks[task_id]['result'], f, ensure_ascii=False, indent=2)
             logger.info(f"分析结果已保存: {out_path}")
@@ -1118,3 +1256,89 @@ class SimilarityService:
         ]
         for task_id in expired_tasks:
             del self.tasks[task_id]
+
+    #新增方法
+    def _collect_entity_statistics(self, extracted_data: Dict[str, Any]) -> Dict[str, Any]:
+        
+        try:
+            all_entities = []
+            entity_type_counts = {}
+            
+            # 统计招标文件实体
+            tender_texts = extracted_data.get("tender_texts", [])
+            for text_item in tender_texts:
+                entities = text_item.get("entities", [])
+                all_entities.extend(entities)
+                for entity in entities:
+                    entity_type = entity.get("entity", "未知")
+                    entity_type_counts[entity_type] = entity_type_counts.get(entity_type, 0) + 1
+            
+            # 统计投标文件实体
+            bid_files = extracted_data.get("bid_files", [])
+            for bid_file in bid_files:
+                texts = bid_file.get("texts", [])
+                for text_item in texts:
+                    entities = text_item.get("entities", [])
+                    all_entities.extend(entities)
+                    for entity in entities:
+                        entity_type = entity.get("entity", "未知")
+                        entity_type_counts[entity_type] = entity_type_counts.get(entity_type, 0) + 1
+            
+            # 按数量排序
+            sorted_entity_counts = dict(sorted(
+                entity_type_counts.items(), 
+                key=lambda x: x[1], 
+                reverse=True
+            ))
+            
+            # 收集一些实体示例（每种类型最多3个）
+            entity_examples = {}
+            for entity_type in sorted_entity_counts.keys():
+                examples = []
+                # 从招标文件收集示例
+                for text_item in tender_texts:
+                    entities = text_item.get("entities", [])
+                    for entity in entities:
+                        if entity.get("entity") == entity_type:
+                            examples.append(entity.get("text_content", ""))
+                            if len(examples) >= 3:
+                                break
+                    if len(examples) >= 3:
+                        break
+                
+                # 如果招标文件示例不足，从投标文件补充
+                if len(examples) < 3:
+                    for bid_file in bid_files:
+                        texts = bid_file.get("texts", [])
+                        for text_item in texts:
+                            entities = text_item.get("entities", [])
+                            for entity in entities:
+                                if entity.get("entity") == entity_type:
+                                    if entity.get("text_content", "") not in examples:
+                                        examples.append(entity.get("text_content", ""))
+                                    if len(examples) >= 3:
+                                        break
+                            if len(examples) >= 3:
+                                break
+                        if len(examples) >= 3:
+                            break
+                
+                entity_examples[entity_type] = examples[:3]  # 最多3个示例
+            
+            
+            return {
+                "total_entities": len(all_entities),
+                "entity_counts": sorted_entity_counts,
+                "entity_types": list(sorted_entity_counts.keys()),  
+                "entity_examples": entity_examples
+            } 
+            
+        except Exception as e:
+            logger.error(f"收集实体统计信息失败: {str(e)}")
+            
+            return {
+                "total_entities": 0,
+                "entity_counts": {},  
+                "entity_types": [],   
+                "entity_examples": {}
+            } 

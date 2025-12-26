@@ -7,9 +7,11 @@ from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from fastapi.responses import StreamingResponse, JSONResponse
 import openpyxl
 from app.service.similarity_service import SimilarityService
+from app.service.entity_rec_service import EntityRecognitionService #新增，导入实体识别服务
 
 router = APIRouter(prefix="/api/similarity", tags=["相似度分析"])
 similarity_service = SimilarityService()
+entity_service = EntityRecognitionService() #新增，实例化实体识别服务
 
 @router.post("/upload")
 async def upload_files(
@@ -82,6 +84,7 @@ def export_excel(task_id: str):
         # 标记几乎相同页面
         is_near_identical = "是" if d.get('is_near_identical', False) else "否"
         
+
         ws.append([
             d.get('bid_file', ''), d.get('page', ''), d.get('similar_with', ''), d.get('similar_page', ''),
             d.get('similarity', ''), d.get('text', ''), '\n'.join(d.get('grammar_errors', [])), ','.join(evade), is_near_identical
@@ -167,12 +170,46 @@ async def analyze_extracted_texts(extracted_data: dict):
         if not extracted_data:
             raise HTTPException(status_code=400, detail="请求数据不能为空")
         
+        #新增开始
+        # 为招标文件文本添加实体
+        tender_texts = extracted_data.get('tender_texts', [])
+        tender_texts_with_entities = []
+        for text_item in tender_texts:
+            entities = entity_service.extract_entities(text_item.get('text', ''))
+            new_item = text_item.copy()
+            new_item['entities'] = entities
+            tender_texts_with_entities.append(new_item)
+        
+        # 为投标文件文本添加实体
+        bid_files = extracted_data.get('bid_files', [])
+        bid_files_with_entities = []
+        for bid_file in bid_files:
+            texts = bid_file.get('texts', [])
+            texts_with_entities = []
+            for text_item in texts:
+                entities = entity_service.extract_entities(text_item.get('text', ''))
+                new_item = text_item.copy()
+                new_item['entities'] = entities
+                texts_with_entities.append(new_item)
+            
+            new_bid_file = bid_file.copy()
+            new_bid_file['texts'] = texts_with_entities
+            bid_files_with_entities.append(new_bid_file)
+        
+        # 使用增强后的数据进行相似度分析
+        enhanced_data = {
+            'tender_texts': tender_texts_with_entities,
+            'bid_files': bid_files_with_entities
+        }
+        #新增，结束
+
         # 启动分析任务
         task_id = similarity_service.start_analysis_from_extracted_texts(extracted_data)
         
         return {
             "msg": "基于提取文本的分析任务已启动",
-            "task_id": task_id
+            "task_id": task_id,
+            "note": "文本已包含实体信息"
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=f"数据格式错误: {str(e)}")

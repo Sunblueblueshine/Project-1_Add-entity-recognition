@@ -1,0 +1,12 @@
+2025-12-26 10:43:38,252 - app.service.similarity_service - INFO - 开始分析已提取文本任务: 833a99a2-08aa-48ee-b50c-e9c749794ce7
+2025-12-26 10:43:38,252 - app.service.similarity_service - INFO - 基于提取文本启动相似度分析任务: 833a99a2-08aa-48ee-b50c-e9c749794ce7
+2025-12-26 10:43:45,359 - app.service.similarity_service - INFO - [TASK_DONE] mem=1405.1MB cpu=387.0% | {'task_id': '833a99a2-08aa-48ee-b50c-e9c749794ce7', 'elapsed': '7.0s'}
+2025-12-26 10:43:45,365 - app.service.similarity_service - INFO - 分析结果已保存: C:\Users\16030\bidding-docs-similarity\saved_results\result_with_entities_833a99a2-08aa-48ee-b50c-e9c749794ce7_20251226_104345.json
+2025-12-26 11:09:10,510 - app.service.similarity_service - INFO - 开始分析已提取文本任务: 3831cd61-9b98-4fcc-b05a-a390000120c8
+2025-12-26 11:09:10,511 - app.service.similarity_service - INFO - 基于提取文本启动相似度分析任务: 3831cd61-9b98-4fcc-b05a-a390000120c8
+2025-12-26 11:09:17,115 - app.service.similarity_service - INFO - [TASK_DONE] mem=1406.6MB cpu=0.0% | {'task_id': '3831cd61-9b98-4fcc-b05a-a390000120c8', 'elapsed': '6.5s'}
+2025-12-26 11:09:17,125 - app.service.similarity_service - INFO - 分析结果已保存: C:\Users\16030\bidding-docs-similarity\saved_results\result_with_entities_3831cd61-9b98-4fcc-b05a-a390000120c8_20251226_110917.json
+2025-12-26 11:22:06,227 - app.service.similarity_service - INFO - 开始分析已提取文本任务: 215db71c-6789-4a69-9fcf-2c73292afb34
+2025-12-26 11:22:06,227 - app.service.similarity_service - INFO - 基于提取文本启动相似度分析任务: 215db71c-6789-4a69-9fcf-2c73292afb34
+2025-12-26 11:22:13,565 - app.service.similarity_service - INFO - [TASK_DONE] mem=1406.7MB cpu=66.5% | {'task_id': '215db71c-6789-4a69-9fcf-2c73292afb34', 'elapsed': '7.2s'}
+2025-12-26 11:22:13,573 - app.service.similarity_service - INFO - 分析结果已保存: C:\Users\16030\bidding-docs-similarity\saved_results\result_with_entities_215db71c-6789-4a69-9fcf-2c73292afb34_20251226_112213.json

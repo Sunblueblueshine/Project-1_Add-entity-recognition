@@ -301,3 +301,5 @@ def is_synonym_evade(text1: str, text2: str) -> bool:
     # 判断是否为规避行为
     total_tokens = max(len(tokens1), len(tokens2))
     return total_tokens > 0 and synonym_count / total_tokens > 0.1
+
+

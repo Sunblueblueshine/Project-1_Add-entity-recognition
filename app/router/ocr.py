@@ -11,6 +11,7 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, Form
 from fastapi.responses import JSONResponse
 from app.service.paddle_ocr_service import ocr_service
 from app.service.text_utils import extract_text_from_pdf
+from app.service.entity_rec_service import default_entity_rec_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/ocr", tags=["OCR文本提取"])

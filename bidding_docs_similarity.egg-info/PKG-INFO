@@ -1,3 +1,25 @@
+Metadata-Version: 2.4
+Name: bidding-docs-similarity
+Version: 0.1.0
+Summary: Add your description here
+Requires-Python: ==3.10.*
+Description-Content-Type: text/markdown
+Requires-Dist: faiss-cpu>=1.11.0.post1
+Requires-Dist: fastapi>=0.116.1
+Requires-Dist: language-tool-python>=2.9.4
+Requires-Dist: numpy>=1.26.4
+Requires-Dist: openpyxl>=3.1.5
+Requires-Dist: pdfplumber>=0.11.7
+Requires-Dist: pymupdf>=1.26.4
+Requires-Dist: python-docx>=1.2.0
+Requires-Dist: python-multipart>=0.0.20
+Requires-Dist: sentence-transformers>=5.0.0
+Requires-Dist: torch>=2.7.1
+Requires-Dist: uvicorn>=0.35.0
+Requires-Dist: paddleocr>=2.7.0
+Requires-Dist: paddlepaddle>=2.5.0
+Requires-Dist: pip>=25.2
+
 # 投标文件相似度检测系统
 
 基于 FastAPI 与本地 text2vec 语义模型，实现大体量招投标文件的语义雷同检测与规避行为识别，支持 OCR 表格/文本识别与结果导出。
@@ -218,6 +240,3 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ## 反馈
 
 如有问题或建议，欢迎提交 Issue 或联系作者。
-
-## 补充
-在此基础上新增实体识别方法，没有增加接口，在相似度分析的接口同时进行实体识别的功能（识别的是相似度分析后的text）。效果：人名都能匹配成功，但是身份证识别还需要修改，出现\n截断的错误
