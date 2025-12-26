@@ -2,8 +2,6 @@ import re
 from typing import List, Dict, Any
 
 class EntityRecognitionService:
-    """简化版实体识别服务 - 只保留核心实体类型"""
-
     def __init__(self):
         # 专注5种核心实体类型
         self.patterns = {
@@ -23,7 +21,7 @@ class EntityRecognitionService:
             ],
 
            "人名": [
-                # ========== 修改1：增强正则表达式，防止"方式"被误识别 ==========
+                # 增强正则表达式，防止"方式"被误识别 
                 # 原代码：r'联系方式\s*联系\s*([\u4e00-\u9fa5]{2,4})',
                 # 修改后：添加边界检查，确保提取的不是"方式"
                 r'联系方式\s*联系\s*([\u4e00-\u9fa5]{2,4})(?![式样])',
@@ -80,7 +78,7 @@ class EntityRecognitionService:
                 # 匹配明确的人名格式
                 r'([\u4e00-\u9fa5]{2,4})\s*(?:签字|盖章)\b',
                 
-                # ========== 新增：专门处理"签字代表 刘永凤 经理"格式 ==========
+                # 新增：专门处理"签字代表 刘永凤 经理"格式 
                 r'签字代表\s+([\u4e00-\u9fa5]{2,4})\s+经理',
                 r'代表\s+([\u4e00-\u9fa5]{2,4})\s+经理',
             ],
@@ -137,7 +135,7 @@ class EntityRecognitionService:
             # 新增黑名单词汇
             "单位负责", "印鉴签字", "签字盖章", "签字确认", "签字代表",
             "负责人", "单位", "印鉴", "签字", "盖章", "负责", "项目负责",
-            # ========== 新增：将"方式"和"经理"加入黑名单 ==========
+            # 新增：将"方式"和"经理"加入黑名单
             "方式", "经理", "代表", "职务"
         }
 
@@ -149,7 +147,7 @@ class EntityRecognitionService:
         if not text or not isinstance(text, str):
             return []
 
-        # ========== 新增：创建清理换行符的文本副本 ==========
+        # 新增：创建清理换行符的文本副本 
         cleaned_text = self._clean_text_for_entity_recognition(text)
         
         # 保存原始文本用于位置映射
@@ -164,7 +162,7 @@ class EntityRecognitionService:
 
         return entities
     
-    # ========== 新增：专门处理被换行符截断的文本 ==========
+    # 新增：专门处理被换行符截断的文本 
     def _clean_text_for_entity_recognition(self, text: str) -> str:
         """
         预处理文本，处理换行符导致的文本截断问题
@@ -236,7 +234,7 @@ class EntityRecognitionService:
         
         return cleaned_text
     
-    # ========== 新增：在清理文本上提取实体并映射位置 ==========
+    # 新增：在清理文本上提取实体并映射位置
     def _extract_from_cleaned_text(self, cleaned_text: str, original_text: str) -> List[Dict[str, Any]]:
         """在清理后的文本上提取实体，并映射回原始文本位置"""
         entities = []
@@ -300,7 +298,7 @@ class EntityRecognitionService:
         
         return entities
     
-    # ========== 新增：构建位置映射关系 ==========
+    # 新增：构建位置映射关系 
     def _build_position_map(self, original_text: str, cleaned_text: str) -> Dict[int, int]:
         """
         构建原始文本位置到清理文本位置的映射
@@ -329,7 +327,7 @@ class EntityRecognitionService:
         
         return position_map
     
-    # ========== 新增：在原始文本中查找实体 ==========
+    # 新增：在原始文本中查找实体 
     def _find_in_original_text(self, entity_text: str, original_text: str, 
                                position_map: Dict[int, int],
                                cleaned_start: int, cleaned_end: int) -> tuple:
@@ -391,7 +389,7 @@ class EntityRecognitionService:
             if text in self.name_blacklist:
                 return False
             
-            # ========== 增强过滤逻辑 ==========
+            # 增强过滤逻辑 
             # 额外过滤：包含"负责"、"单位"、"印鉴"、"签字"等词汇
             invalid_keywords = {"负责", "单位", "印鉴", "签字", "盖章", "项目", "经理", "代表", "方式"}
             if any(keyword in text for keyword in invalid_keywords):
@@ -402,14 +400,14 @@ class EntityRecognitionService:
                 if len(text) < 2 or len(text) > 4:
                     return False
 
-                # ✅ 必须是以常见姓氏开头
+                # 必须是以常见姓氏开头
                 if text[0] not in self.common_surnames:
                     # 允许复姓
                     double_surnames = {"诸葛", "欧阳", "司马", "上官", "令狐", "皇甫"}
                     if text[:2] not in double_surnames:
                         return False
                         
-                # ========== 新增：检查是否以无效词结尾 ==========
+                # 新增：检查是否以无效词结尾 
                 invalid_endings = {"式", "理", "表", "责", "字", "章"}
                 if text[-1] in invalid_endings:
                     return False
@@ -450,7 +448,7 @@ class EntityRecognitionService:
 
         return unique_entities
     
-    # ========== 新增：处理相似度分析JSON的便捷方法 ==========
+    #  新增：处理相似度分析JSON的便捷方法 
     def extract_entities_from_json(self, json_data: Dict) -> List[Dict]:
         """
         从相似度分析的JSON结果中提取实体
